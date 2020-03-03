@@ -1,51 +1,130 @@
-# <img src="https://avatars1.githubusercontent.com/u/7063040?v=4&s=200.jpg" alt="HU" width="24" /> Desafio Delta
+Ambiente utilizado em um desktop Windows 10 Home Single Language - 64 bits:
 
-Como DevOps voce vai desenhar e implementar arquitetura e sistemas relacionados a build, release, deploy e configurações de aplicações, assim como manter-se atualizado com as tecnologias de mercado.
+1) Instalação do VirtualBox para Windows,
+sendo o link abaixo utilizado para download 
+https://download.virtualbox.org/virtualbox/6.1.4/VirtualBox-6.1.4-136177-Win.exe
 
-Este estudo de caso tem como objetivo testar as habilidades relevantes para esta função. Por favor leia todas as instruções e responda todas as questões.
+2) Instalação do VirtualBox Extension Package
 
-O projeto consiste em uma API implementada com Node.js​ + MySQL​ para criação e consulta de pacotes.
-Você deve:
+3) Donwload do Debian 10.3, sendo o link abaixo utilizado para Download
+http://debian.c3sl.ufpr.br/debian-cd/current/amd64/iso-cd/debian-10.3.0-amd64-xfce-CD-1.iso
 
--   Criar o diagrama de toda a infraestrutura do projeto em questão ( frontend, backend e database );
-    -   Montar toda a infraestrutura utilizando Docker:
-        -   1 container rodando a aplicação em Node.js;
-        -   1 container rodando um banco de dados MySQL;
-        -   1 container rodando um servidor nginx;
--   Rodar a aplicação frontend na porta 80 e colocar o nginx ​como reverse proxy. O unico path disponivel deve ser o /packages, todos os demais paths devem ser redirecionados para o path default;
--   Preparar o banco de dados para ser usado pela aplicação;
--   Fornecer comandos para criação e inicialização do ambiente de forma automatizada
-    -   (**diferencial**) Usar minikube ( utilizando kubectl )
--   Fornecer os comandos necessário para criar e deletar os pacotes;
--   Todos os logs ( access e error ) devem estar diponiveis via "docker logs".
+4) Criação de uma máquina virtual com o Debian 10.3
+10 GB de Disco
+1 Vcpu
+3,5 GB de RAM
 
-## Requisitos
+5) Instalação do Debian 10.3 na máquina virtual acima
 
--   Forkar esse desafio e criar o seu projeto (ou workspace) usando a sua versão desse repositório, tão logo acabe o desafio, submeta um _pull request_.
-    -   Caso você tenha algum motivo para não submeter um _pull request_, crie um repositório privado no Github, faça todo desafio na branch **master** e não se esqueça de preencher o arquivo `pull-request.txt`. Tão logo termine seu desenvolvimento, adicione como colaborador o usuário `automator-hurb` no seu repositório e o deixe disponível por pelo menos 30 dias. **Não adicione o `automator-hurb` antes do término do desenvolvimento.**
-    -   Caso você tenha algum problema para criar o repositório privado, ao término do desafio preencha o arquivo chamado `pull-request.txt`, comprima a pasta do projeto - incluindo a pasta `.git` - e nos envie por email.
--   Para executar seu código, deve ser preciso apenas rodar os seguintes comandos:
-    -   git clone \$seu-forkseu-fork
-    -   comando para instalar dependências
-    -   comando para executar a aplicação
+6) Atualizando o Debian
+  apt-get update
 
-## Critério de avaliação
+7) Instalando os pacotes pre-requisitos do Docke CE
+  apt-get install \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg2 \
+    software-properties-common
 
--   **Organização do código**: Separação de módulos, view e model, back-end e front-end
--   **Clareza**: O README explica de forma resumida qual é o problema e como pode rodar a aplicação?
--   **Assertividade**: A aplicação está fazendo o que é esperado? Se tem algo faltando, o README explica o porquê?
--   **Legibilidade do código** (incluindo comentários)
--   **Segurança**: Existe alguma vulnerabilidade clara?
--   **Cobertura de testes** (Não esperamos cobertura completa)
--   **Histórico de commits** (estrutura e qualidade)
--   **Escolhas técnicas**: A escolha das bibliotecas, banco de dados, arquitetura, etc, é a melhor escolha para a aplicação?
+8) Adicionando o GPG oficial do Docker 
+    curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
 
-## Dúvidas
+9) Adicionando o Repositório
+    add-apt-repository \
+    "deb [arch=amd64] https://download.docker.com/linux/debian \
+    $(lsb_release -cs) \
+    stable"
 
-Quaisquer dúvidas que você venha a ter, consulte as [_issues_](https://github.com/HurbCom/challenge-delta/issues) para ver se alguém já não a fez e caso você não ache sua resposta, abra você mesmo uma nova issue!
+10) Atualizando o repositório
+    apt-get update
 
-Boa sorte e boa viagem! ;)
+11) instalando o Docker
+    apt-get install docker-ce docker-ce-cli containerd.io
 
-<p align="center">
-  <img src="ca.jpg" alt="Challange accepted" />
-</p>
+12) Entrar o Docker Hub e dar um Fork no repositório
+
+13) Na máquina virtual, clonar o repositório
+    git clone https://github.com/flaviopv/challenge-delta.git
+
+14) Pegar a última versão do SQL Server
+    docker pull mysql/mysql-server
+
+15) Criação do diretório mysql
+    mkdir mysql
+
+16) Criação do diretório db, dentro do mysql
+    mkdir db 
+    mv database_schema.sql ./mysql/db
+
+17) Criação do Dockerfile
+FROM mysql:5.6 
+RUN apt-get update -y
+ENV MYSQL_DATABASE packages
+COPY ./db/ /docker-entrypoint-initdb.d/
+
+18) Criação do Container
+    docker build -t hurbdb .
+    
+19) Execução do Container
+    docker run -d -p 3306:3306 --name hurbdb -e MYSQL_ROOT_PASSWORD=rootpwd -e MYSQL_DATABASE=packages -e MYSQL_USER=offeruser -e MYSQL_PASSWORD=offerpwd hurbdb
+
+20) Criação de uma Network
+    docker create network mynetwork
+
+21) Connectar o hurbdb na rede mynetwork
+    docker network connect mynetwork hurbdb
+
+22) Criação do Dockerfile para o container hurbnode
+FROM node:8
+WORKDIR /node/src/app
+COPY package*.json ./
+RUN npm install --no-fund
+COPY . .
+EXPOSE 8888
+CMD [ "node", "server.js" ]
+
+23) Criação do Container 
+    docker build -t hurbnode .
+
+24) Execução do container 
+    docker run -d -p 8888:8888 --name hurbnode hurbnode
+
+25) Connectar o hurbnode na rede mynetwork
+    docker network connect mynetwork hurbnode
+
+26) Criação do Docker file para ser utilizado pelo hurbproxy
+FROM nginx
+RUN rm /etc/nginx/conf.d/default.conf
+COPY default.conf /etc/nginx/conf.d
+
+27) Criação do arquivo de configuração do nginxserver 
+{
+    listen 80;
+    server_name nginxserver;
+
+    location / {
+        root /usr/share/nginx/html;
+    }
+    
+    location /packages {
+        proxy_pass http://hurbnode:8888/packages;
+    }
+
+    error_page 500 501 502 503 504 /50x.html;
+
+    location /50x.html {
+        root /usr/share/nginx/html;
+    }
+}
+
+28) Criação do Container nginx-proxy
+    docker build -t hurbproxy .
+
+29) Execução do container hurbproxy
+    docker run -d -p 80:80 --name hurbproxy --net mynetwork hurbproxy
+
+
+OBS:
+
+Poderiamos usar o docker compose para criar um arquivo yaml para automatizar a execução de todos o containers
